@@ -1,0 +1,60 @@
+{
+  "name": "dsh-token-mascot",
+  "version": "1.4.1",
+  "description": "小汪：DSH 右下角的 Q 版看板娘，实时显示 token 消耗、速率、上下文占用、当前任务与今日全部会话合计",
+  "license": "MIT",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "token",
+    "token-usage",
+    "mascot",
+    "ui"
+  ],
+  "type": "module",
+  "main": "./plugin/lib/index.js",
+  "exports": {
+    ".": {
+      "default": "./plugin/lib/index.js"
+    },
+    "./client": {
+      "default": "./plugin/lib/client.js"
+    },
+    "./cordis.patch.yml": "./plugin/cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "plugin/lib/index.js",
+    "plugin/lib/client.js",
+    "plugin/cordis.patch.yml",
+    "docs/images",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node test/validate.mjs",
+    "preview": "node preview/build-preview.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zouyuhang233/dsh-token-mascot.git"
+  },
+  "homepage": "https://github.com/zouyuhang233/dsh-token-mascot#readme",
+  "bugs": {
+    "url": "https://github.com/zouyuhang233/dsh-token-mascot/issues"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./plugin/cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  }
+}

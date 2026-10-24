@@ -1,0 +1,894 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>dsh-token-mascot · offline contract harness</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0b0d11;
+    --panel: #12151c;
+    --panel-2: #171b24;
+    --line: #252b36;
+    --fg: #e8eaed;
+    --fg-2: #b6bcc4;
+    --fg-3: #8a9099;
+    --pass: #66d19e;
+    --fail: #ff6b6b;
+    --accent: #4d93f8;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(1100px 520px at 18% -10%, rgba(77, 147, 248, 0.10), transparent 62%),
+      radial-gradient(900px 420px at 92% 0%, rgba(102, 209, 158, 0.06), transparent 58%),
+      var(--bg);
+    color: var(--fg);
+    font: 14px/1.55 ui-sans-serif, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+  }
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    padding: 20px 26px 16px;
+    background: linear-gradient(180deg, rgba(11, 13, 17, 0.99), rgba(11, 13, 17, 0.9) 72%, rgba(11, 13, 17, 0));
+    border-bottom: 1px solid var(--line);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .kicker {
+    margin: 0 0 8px;
+    color: var(--fg-3);
+    font: 600 11px/1.2 ui-monospace, "Cascadia Mono", Consolas, monospace;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  #summary {
+    font: 700 30px/1.12 ui-monospace, "Cascadia Mono", Consolas, monospace;
+    letter-spacing: 0.015em;
+    transition: color 0.18s ease;
+  }
+  #summary.pending { color: var(--fg-3); }
+  #summary.pass { color: var(--pass); text-shadow: 0 0 22px rgba(102, 209, 158, 0.24); }
+  #summary.fail { color: var(--fail); text-shadow: 0 0 22px rgba(255, 107, 107, 0.20); }
+  .subtitle {
+    margin-top: 7px;
+    color: var(--fg-2);
+    font-size: 13px;
+  }
+  .subtitle code {
+    padding: 1px 5px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.03);
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: 12px;
+  }
+  .meta {
+    margin-top: 8px;
+    color: var(--fg-3);
+    font: 12px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace;
+    overflow-wrap: anywhere;
+  }
+  main { max-width: 1120px; padding: 10px 26px 30px; margin: 0 auto; }
+  ol#results {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+  }
+  li.result {
+    display: grid;
+    grid-template-columns: 58px minmax(0, 1fr);
+    gap: 2px 14px;
+    padding: 9px 13px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--panel);
+  }
+  li.result .tag {
+    font: 700 12px/1.7 ui-monospace, "Cascadia Mono", Consolas, monospace;
+    letter-spacing: 0.04em;
+    grid-row: 1;
+  }
+  li.result .name {
+    color: var(--fg);
+    font-size: 13.5px;
+    overflow-wrap: anywhere;
+  }
+  li.result .info {
+    grid-column: 2;
+    color: var(--fg-3);
+    font: 12px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  li.result.pass .tag { color: var(--pass); }
+  li.result.fail {
+    border-color: rgba(255, 107, 107, 0.42);
+    background: linear-gradient(180deg, rgba(255, 107, 107, 0.075), rgba(255, 107, 107, 0.03));
+  }
+  li.result.fail .tag { color: var(--fail); }
+  li.result.fail .name { color: #ffd7d7; }
+  #help {
+    max-width: 1120px;
+    margin: 4px auto 60px;
+    padding: 16px 18px;
+    border: 1px dashed var(--line);
+    border-radius: 12px;
+    color: var(--fg-3);
+    font-size: 12.5px;
+    line-height: 1.7;
+  }
+  #help strong { color: var(--fg-2); font-weight: 600; }
+  #help code {
+    color: #a9c7ff;
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (max-width: 620px) {
+    header { padding: 16px 16px 12px; }
+    #summary { font-size: 24px; }
+    main { padding: 8px 14px 24px; }
+    li.result { grid-template-columns: 48px minmax(0, 1fr); padding: 8px 10px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <p class="kicker">offline contract harness</p>
+  <div id="summary" class="pending" role="status" aria-live="polite">RUNNING…</div>
+  <div class="subtitle">
+    <code>dsh-token-mascot</code> · 浏览器侧离线契约测试 · 加载 <code>../plugin/lib/client.js</code>
+  </div>
+  <div id="meta" class="meta">等待插件脚本…</div>
+</header>
+
+<main>
+  <ol id="results" aria-live="polite"></ol>
+  <div id="help">
+    <strong>怎么读这页：</strong>顶部是总结果，绿色 <code>PASS</code> / 红色 <code>FAIL</code> 逐项列出。
+    用桩 <code>__ModuleLoader__</code> + 桩 React / ReactDOM，在<b>无网络、无 DSH 宿主</b>的页面里执行插件的
+    <code>load → factory(require) → apply(ctx)</code> 全链路，并直接调用 <code>exports.__internals</code> 的纯函数做断言。
+    <br />
+    <strong>程序读取：</strong><code>window.__results</code> 为 <code>[{name, ok, info}]</code>；
+    <code>window.__summary</code> 为 <code>{total, passed, failed, ok}</code>；<code>window.__calls</code> 记录
+    <code>load / require / registered / errors</code>。
+    <br />
+    <strong>手动验证：</strong>直接双击打开本文件（file:// 即可，无需服务器、无 CDN 依赖）。如出现
+    “script 加载失败”，先确认 <code>plugin/lib/client.js</code> 已生成。
+  </div>
+</main>
+
+<!-- ========================================================================
+     1) 插件加载前的桩：DSH 浏览器端模块装载器 + React / ReactDOM
+     ======================================================================== -->
+<script>
+(function () {
+  'use strict';
+
+  var calls = window.__calls = {
+    load: [],       // __ModuleLoader__.load 收到的描述符
+    require: [],    // factory(require) 里 require 收到的 id
+    registered: [], // ctx.slots.register 收到的 { def, comp }
+    errors: []      // 页面 / 桩捕获到的错误（诊断用）
+  };
+
+  // 供断言脚本与外部读取；任何时候都存在，避免脚本先崩导致 undefined。
+  window.__results = [];
+  window.__summary = null;
+  window.__done = false;
+
+  window.__ModuleLoader__ = {
+    load: function (descriptor) {
+      calls.load.push(descriptor);
+    }
+  };
+
+  function hasOwn(object, key) {
+    return Object.prototype.hasOwnProperty.call(object, key);
+  }
+
+  function childArray(children) {
+    if (children === null || children === undefined || typeof children === 'boolean') return [];
+    if (Array.isArray(children)) {
+      var out = [];
+      for (var i = 0; i < children.length; i += 1) out = out.concat(childArray(children[i]));
+      return out;
+    }
+    return [children];
+  }
+
+  /* ---- React 桩：满足模块初始化 + apply 阶段用到的 API ---- */
+  var idSeq = 0;
+  var noop = function () {};
+
+  function createElement(type, props) {
+    var outProps = {};
+    if (props && typeof props === 'object') {
+      for (var key in props) {
+        if (hasOwn(props, key)) outProps[key] = props[key];
+      }
+    }
+    if (arguments.length > 2) {
+      var children = Array.prototype.slice.call(arguments, 2);
+      outProps.children = children.length === 1 ? children[0] : children;
+    }
+    return { type: type, props: outProps, __isElement: true };
+  }
+
+  function useState(initial) {
+    return [typeof initial === 'function' ? initial() : initial, noop];
+  }
+
+  function useReducer(reducer, initial) {
+    return [typeof initial === 'function' ? initial() : initial, noop];
+  }
+
+  function useRef(initial) {
+    return { current: initial };
+  }
+
+  function useMemo(factory) {
+    return typeof factory === 'function' ? factory() : undefined;
+  }
+
+  function useCallback(callback) {
+    return callback;
+  }
+
+  function createContext(defaultValue) {
+    var context = {
+      _currentValue: defaultValue,
+      $$typeof: Symbol('react.context'),
+      Provider: null,
+      Consumer: null
+    };
+    context.Provider = { $$typeof: Symbol('react.provider'), _context: context };
+    context.Consumer = { $$typeof: Symbol('react.consumer'), _context: context };
+    return context;
+  }
+
+  function Component(props, context) {
+    this.props = props || {};
+    this.context = context;
+    this.state = {};
+    this.refs = {};
+  }
+  Component.prototype.setState = function (partial, callback) {
+    var next = typeof partial === 'function' ? partial(this.state, this.props) : partial;
+    if (next && typeof next === 'object') {
+      var merged = {};
+      for (var key in this.state) if (hasOwn(this.state, key)) merged[key] = this.state[key];
+      for (var extra in next) if (hasOwn(next, extra)) merged[extra] = next[extra];
+      this.state = merged;
+    }
+    if (typeof callback === 'function') callback();
+  };
+  Component.prototype.forceUpdate = function (callback) {
+    if (typeof callback === 'function') callback();
+  };
+  Component.prototype.render = function () { return null; };
+
+  function PureComponent(props, context) {
+    Component.call(this, props, context);
+  }
+  PureComponent.prototype = Object.create(Component.prototype);
+  PureComponent.prototype.constructor = PureComponent;
+
+  var React = {
+    version: '18.0.0-harness-stub',
+    createElement: createElement,
+    cloneElement: function (element, props) {
+      var children = Array.prototype.slice.call(arguments, 2);
+      var base = element && element.props ? element.props : {};
+      var merged = {};
+      for (var key in base) if (hasOwn(base, key)) merged[key] = base[key];
+      if (props && typeof props === 'object') {
+        for (var extra in props) if (hasOwn(props, extra)) merged[extra] = props[extra];
+      }
+      if (children.length > 0) merged.children = children.length === 1 ? children[0] : children;
+      return { type: element && element.type, props: merged, __isElement: true };
+    },
+    isValidElement: function (value) {
+      return !!(value && typeof value === 'object' && value.__isElement);
+    },
+    createRef: function () { return { current: null }; },
+    Component: Component,
+    PureComponent: PureComponent,
+    Fragment: Symbol('react.fragment'),
+    StrictMode: Symbol('react.strict_mode'),
+    Suspense: Symbol('react.suspense'),
+    Profiler: Symbol('react.profiler'),
+    Children: {
+      map: function (children, callback, thisArg) {
+        var list = childArray(children);
+        var out = [];
+        for (var i = 0; i < list.length; i += 1) {
+          var mapped = callback.call(thisArg, list[i], i);
+          if (mapped !== null && mapped !== undefined) out.push(mapped);
+        }
+        return out;
+      },
+      forEach: function (children, callback, thisArg) {
+        var list = childArray(children);
+        for (var i = 0; i < list.length; i += 1) callback.call(thisArg, list[i], i);
+      },
+      count: function (children) { return childArray(children).length; },
+      toArray: childArray,
+      only: function (child) {
+        if (child === null || child === undefined || Array.isArray(child)) {
+          throw new Error('React.Children.only expected to receive a single React element child');
+        }
+        return child;
+      }
+    },
+    useState: useState,
+    useReducer: useReducer,
+    useEffect: noop,
+    useLayoutEffect: noop,
+    useInsertionEffect: noop,
+    useRef: useRef,
+    useMemo: useMemo,
+    useCallback: useCallback,
+    useContext: function (context) { return context ? context._currentValue : undefined; },
+    useImperativeHandle: noop,
+    useId: function () { idSeq += 1; return 'react-harness-id-' + idSeq; },
+    useSyncExternalStore: function (subscribe, getSnapshot) {
+      try { return getSnapshot(); } catch (error) { return undefined; }
+    },
+    useTransition: function () {
+      return [false, function (callback) { if (typeof callback === 'function') callback(); }];
+    },
+    useDeferredValue: function (value) { return value; },
+    useOptimistic: function (value) { return [value, noop]; },
+    memo: function (component) { return component; },
+    forwardRef: function (render) {
+      var Wrapped = function (props) { return render(props, null); };
+      Wrapped.__isForwardRef = true;
+      Wrapped.render = render;
+      return Wrapped;
+    },
+    createContext: createContext,
+    startTransition: function (callback) { if (typeof callback === 'function') callback(); },
+    act: function (callback) { return callback(); },
+    lazy: function (factory) {
+      var Lazy = function () { return null; };
+      Lazy._factory = factory;
+      return Lazy;
+    },
+    __isHarnessStub: true
+  };
+
+  var ReactDOM = {
+    version: '18.0.0-harness-stub',
+    createPortal: function (children, container) {
+      return { __portal: true, children: children, container: container };
+    },
+    render: noop,
+    unmountComponentAtNode: function () { return true; },
+    findDOMNode: function () { return null; },
+    flushSync: function (callback) { return typeof callback === 'function' ? callback() : undefined; },
+    createRoot: function () { return { render: noop, unmount: noop }; },
+    hydrateRoot: function () { return { render: noop, unmount: noop }; },
+    __isHarnessStub: true
+  };
+
+  // 兼容 CommonJS / Babel interop 两种取用方式
+  React.default = React;
+  ReactDOM.default = ReactDOM;
+  try {
+    Object.defineProperty(React, '__esModule', { value: true });
+    Object.defineProperty(ReactDOM, '__esModule', { value: true });
+  } catch (error) { /* ignore */ }
+
+  window.React = React;
+  window.ReactDOM = ReactDOM;
+
+  /* ---- require 桩：只认 react / react-dom；其他 id 记录后抛错 ---- */
+  window.__requireStub = function requireStub(id) {
+    calls.require.push(id);
+    if (id === 'react') return React;
+    if (id === 'react-dom') return ReactDOM;
+    calls.errors.push('unexpected require(' + JSON.stringify(id) + ')');
+    throw new Error('harness stub: 插件不允许 require(' + JSON.stringify(id) + ')');
+  };
+
+  /* ---- 诊断：页面级异常/未处理 rejection 都记下来 ---- */
+  window.addEventListener('error', function (event) {
+    var message = event && event.message ? event.message : 'script error';
+    calls.errors.push('window.onerror: ' + message);
+  });
+  window.addEventListener('unhandledrejection', function (event) {
+    var reason = event && event.reason ? (event.reason.message || String(event.reason)) : 'unknown';
+    calls.errors.push('unhandledrejection: ' + reason);
+  });
+})();
+</script>
+
+<!-- ========================================================================
+     2) 待测插件本体（经典 script；file:// 双击即可加载）
+     ======================================================================== -->
+<script
+  src="../plugin/lib/client.js"
+  onerror="window.__calls && window.__calls.errors.push('script 加载失败：../plugin/lib/client.js 不存在或不可读（请先生成插件产物）');"
+></script>
+
+<!-- ========================================================================
+     3) 契约断言
+     ======================================================================== -->
+<script>
+(async function runContractTests() {
+  'use strict';
+
+  var calls = window.__calls;
+  var results = window.__results;
+
+  function errMsg(error) {
+    if (!error) return '未知错误';
+    var message = error.message ? String(error.message) : String(error);
+    return message.split(/\r?\n/)[0] || '未知错误';
+  }
+
+  function repr(value) {
+    try { return JSON.stringify(value); } catch (error) { return String(value); }
+  }
+
+  function assert(condition, message) {
+    if (!condition) throw new Error(message);
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, function (character) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character];
+    });
+  }
+
+  function render() {
+    var list = document.getElementById('results');
+    if (!list) return;
+    var html = '';
+    for (var i = 0; i < results.length; i += 1) {
+      var result = results[i];
+      html +=
+        '<li class="result ' + (result.ok ? 'pass' : 'fail') + '">' +
+        '<span class="tag">' + (result.ok ? 'PASS' : 'FAIL') + '</span>' +
+        '<span class="name">' + escapeHtml(result.name) + '</span>' +
+        (result.info ? '<span class="info">' + escapeHtml(result.info) + '</span>' : '') +
+        '</li>';
+    }
+    list.innerHTML = html;
+
+    var failed = 0;
+    for (var j = 0; j < results.length; j += 1) if (!results[j].ok) failed += 1;
+    var summaryEl = document.getElementById('summary');
+    if (summaryEl && window.__done !== true) {
+      summaryEl.textContent = failed > 0
+        ? 'FAILED (' + failed + '/' + results.length + ')'
+        : 'RUNNING… (' + results.length + ')';
+    }
+  }
+
+  function record(name, ok, info) {
+    results.push({ name: name, ok: !!ok, info: info === undefined || info === null ? '' : String(info) });
+    render();
+  }
+
+  function ok(name, info) {
+    record(name, true, info);
+  }
+
+  function bad(name, info) {
+    record(name, false, info);
+  }
+
+  /**
+   * 跑一项断言：fn 返回说明字符串即 PASS，抛错即 FAIL。
+   * 支持 fn 返回 thenable（例如 apply 需要 await 的极端情况）。
+   */
+  function check(name, fn) {
+    var value;
+    try {
+      value = fn();
+    } catch (error) {
+      bad(name, '抛出: ' + errMsg(error));
+      return undefined;
+    }
+    if (value && typeof value.then === 'function') {
+      return value.then(
+        function (info) { ok(name, info); },
+        function (error) { bad(name, '异步失败: ' + errMsg(error)); }
+      );
+    }
+    ok(name, value);
+    return undefined;
+  }
+
+  function descriptors() {
+    if (calls.load.length === 0) {
+      var hint = calls.errors.length > 0 ? '；页面错误: ' + calls.errors.join(' | ') : '';
+      throw new Error('前置失败: 没有捕获到 __ModuleLoader__.load() 调用' + hint);
+    }
+    return calls.load;
+  }
+
+  function firstDescriptor() {
+    var list = descriptors();
+    if (!list[0]) throw new Error('前置失败: load[0] 不是对象');
+    return list[0];
+  }
+
+  function moduleExports() {
+    if (!state.mod) throw new Error('前置失败: factory 未返回可用模块对象');
+    return state.mod;
+  }
+
+  function internalFunction(name) {
+    var bag = state.internals;
+    if (!bag) {
+      var exported = moduleExports();
+      bag = exported.__internals;
+      if (!bag || (typeof bag !== 'object' && typeof bag !== 'function')) {
+        throw new Error('前置失败: exports.__internals 不存在或类型异常（' + typeof bag + '）');
+      }
+      state.internals = bag;
+    }
+    var fn = bag[name];
+    assert(typeof fn === 'function', '__internals.' + name + ' 不是函数（实际 ' + typeof fn + '）');
+    return fn;
+  }
+
+  var state = { mod: null, internals: null };
+
+  /* ---------------------------------------------------------------------- *
+   * A. 模块装载器契约
+   * ---------------------------------------------------------------------- */
+
+  await check('__calls.load.length === 1', function () {
+    assert(
+      calls.load.length === 1,
+      '实际 load.length=' + calls.load.length +
+        (calls.errors.length > 0 ? '；页面错误: ' + calls.errors.join(' | ') : '')
+    );
+    return 'load 调用 1 次';
+  });
+
+  await check('load[0].id === "dsh-token-mascot"', function () {
+    var descriptor = firstDescriptor();
+    assert(
+      descriptor.id === 'dsh-token-mascot',
+      '实际 id=' + repr(descriptor.id)
+    );
+    return 'id=dsh-token-mascot';
+  });
+
+  await check('typeof load[0].factory === "function"', function () {
+    var descriptor = firstDescriptor();
+    assert(
+      typeof descriptor.factory === 'function',
+      '实际 typeof load[0].factory=' + typeof descriptor.factory
+    );
+    return 'factory 是函数';
+  });
+
+  /* ---------------------------------------------------------------------- *
+   * B. factory(require) + 导出形状
+   * ---------------------------------------------------------------------- */
+
+  await check('factory(require) 返回模块对象', async function () {
+    var descriptor = firstDescriptor();
+    assert(typeof descriptor.factory === 'function', '前置失败: load[0].factory 不是函数');
+    var exported = descriptor.factory(window.__requireStub);
+    if (exported && typeof exported.then === 'function') exported = await exported;
+    assert(exported && typeof exported === 'object', 'factory 返回 ' + typeof exported + '，不是对象');
+    state.mod = exported;
+    return 'exports keys=' + Object.keys(exported).join(',');
+  });
+
+  await check('require 仅请求 react / react-dom', function () {
+    var ids = calls.require.slice();
+    var disallowed = ids.filter(function (id) {
+      return id !== 'react' && id !== 'react-dom';
+    });
+    assert(
+      disallowed.length === 0,
+      '出现不允许的 require id: ' + repr(disallowed) + '（只允许 react / react-dom）'
+    );
+    assert(state.mod, '前置失败: factory 未成功返回模块，require 记录可能不完整');
+    return ids.length > 0 ? 'require=' + repr(ids) : 'factory 未调用 require（0 次）';
+  });
+
+  await check('模块导出 apply 是函数', function () {
+    var exported = moduleExports();
+    assert(typeof exported.apply === 'function', '实际 typeof exports.apply=' + typeof exported.apply);
+    return 'apply 是函数';
+  });
+
+  await check('模块导出 inject 是数组且包含 slots、sessions', function () {
+    var exported = moduleExports();
+    assert(Array.isArray(exported.inject), '实际 typeof exports.inject=' + typeof exported.inject);
+    assert(exported.inject.indexOf('slots') >= 0, 'inject 缺少 "slots"，实际=' + repr(exported.inject));
+    assert(exported.inject.indexOf('sessions') >= 0, 'inject 缺少 "sessions"，实际=' + repr(exported.inject));
+    return 'inject=' + repr(exported.inject);
+  });
+
+  /* ---------------------------------------------------------------------- *
+   * C. apply(ctx) 与插槽注册
+   * ---------------------------------------------------------------------- */
+
+  var ctx = {
+    slots: {
+      inject: function (name, fn) {
+        state.injectedSlot = name;
+        assert(
+          typeof fn === 'function',
+          'slots.inject("' + name + '", fn) 的第二个参数不是函数（实际 ' + typeof fn + '）'
+        );
+        return fn();
+      },
+      register: function (definition, component) {
+        calls.registered.push({ def: definition, comp: component });
+        return function () {};
+      }
+    }
+  };
+
+  await check('exports.apply(ctx) 不抛错', async function () {
+    var exported = moduleExports();
+    assert(typeof exported.apply === 'function', '前置失败: exports.apply 不是函数');
+    try {
+      var result = exported.apply(ctx);
+      if (result && typeof result.then === 'function') await result;
+    } catch (error) {
+      throw new Error('apply 抛出: ' + errMsg(error));
+    }
+    return 'registered=' + calls.registered.length;
+  });
+
+  function registeredEntry() {
+    if (calls.registered.length === 0) throw new Error('前置失败: ctx.slots.register 从未被调用');
+    return calls.registered[0];
+  }
+
+  await check('ctx.slots.register 恰好调用一次', function () {
+    assert(
+      calls.registered.length === 1,
+      '实际 registered.length=' + calls.registered.length +
+        '（inject 收到的槽名=' + repr(state.injectedSlot) + '）'
+    );
+    return 'registered.length=1';
+  });
+
+  await check('registered[0].def.name === "conversation.input.right"', function () {
+    var entry = registeredEntry();
+    assert(entry.def && typeof entry.def === 'object', '前置失败: registered[0].def 不是对象');
+    assert(
+      entry.def.name === 'conversation.input.right',
+      '实际 def.name=' + repr(entry.def.name)
+    );
+    return 'def.name=conversation.input.right';
+  });
+
+  await check('registered[0].def.id === "dsh-token-mascot"', function () {
+    var entry = registeredEntry();
+    assert(entry.def && typeof entry.def === 'object', '前置失败: registered[0].def 不是对象');
+    assert(
+      entry.def.id === 'dsh-token-mascot',
+      '实际 def.id=' + repr(entry.def.id)
+    );
+    return 'def.id=dsh-token-mascot';
+  });
+
+  await check('registered[0].comp 是函数', function () {
+    var entry = registeredEntry();
+    assert(
+      typeof entry.comp === 'function',
+      '注册的组件实际类型=' + typeof entry.comp
+    );
+    return 'comp 是函数';
+  });
+
+  /* ---------------------------------------------------------------------- *
+   * D. apply 注入 CSS（<style data-plugin-css>）
+   * ---------------------------------------------------------------------- */
+
+  await check('document.head 注入 <style data-plugin-css>', function () {
+    var tag = document.head.querySelector('style[data-plugin-css]');
+    if (!tag) {
+      var existing = document.head.querySelectorAll('style').length;
+      throw new Error(
+        '未在 document.head 找到 style[data-plugin-css]；' +
+          'head 中现有 style 标签 ' + existing + ' 个（插件应在 apply() 时注入 CSS）'
+      );
+    }
+    var css = tag.textContent || '';
+    return 'data-plugin-css=' + repr(tag.getAttribute('data-plugin-css')) +
+      '，CSS ' + css.length + ' 字符';
+  });
+
+  /* ---------------------------------------------------------------------- *
+   * E. exports.__internals 与纯函数
+   * ---------------------------------------------------------------------- */
+
+  await check('exports.__internals 存在', function () {
+    var exported = moduleExports();
+    var bag = exported.__internals;
+    assert(
+      bag && (typeof bag === 'object' || typeof bag === 'function'),
+      '实际 typeof exports.__internals=' + typeof bag
+    );
+    state.internals = bag;
+    return 'keys=' + Object.keys(bag).join(',');
+  });
+
+  await check('estimateTokens(0) === 0', function () {
+    var actual = internalFunction('estimateTokens')(0);
+    assert(actual === 0, '实际=' + repr(actual));
+    return '返回 0';
+  });
+
+  var ascii = 'abcdefghijklmnopqrstuvwxyz0123456789ABCD'; // 40 字符
+  await check('estimateTokens(ASCII) ≈ chars/4（±1）', function () {
+    var expected = ascii.length / 4;
+    var actual = internalFunction('estimateTokens')(ascii);
+    assert(typeof actual === 'number' && isFinite(actual), '返回不是有限数字：' + repr(actual));
+    assert(
+      Math.abs(actual - expected) <= 1,
+      '实际=' + actual + '，期望=' + expected + ' ±1（chars=' + ascii.length + '）'
+    );
+    return 'chars=' + ascii.length + ' → tokens=' + actual + '（期望 ' + expected + '±1）';
+  });
+
+  var cjk = '你好世界这是测试文本'; // 10 个汉字
+  await check('estimateTokens(CJK) ≥ chars × 0.8', function () {
+    var threshold = cjk.length * 0.8;
+    var actual = internalFunction('estimateTokens')(cjk);
+    assert(typeof actual === 'number' && isFinite(actual), '返回不是有限数字：' + repr(actual));
+    assert(
+      actual >= threshold,
+      '实际=' + actual + '，期望 ≥ ' + threshold + '（chars=' + cjk.length + '）'
+    );
+    return 'chars=' + cjk.length + ' → tokens=' + actual + '（≥ ' + threshold + '）';
+  });
+
+  var formatCases = [0, 999, 1234, 1234567];
+  for (var formatIndex = 0; formatIndex < formatCases.length; formatIndex += 1) {
+    (function (input) {
+      check('formatTokens(' + input + ') 返回合理字符串', function () {
+        var output = internalFunction('formatTokens')(input);
+        assert(typeof output === 'string', '返回类型=' + typeof output);
+        assert(output.trim().length > 0, '返回空字符串');
+        assert(output.length <= 24, '长度 ' + output.length + ' 过长：' + repr(output));
+        assert(!/undefined|NaN/.test(output), '包含 undefined/NaN：' + repr(output));
+        return repr(output) + '（' + output.length + ' 字符）';
+      });
+    })(formatCases[formatIndex]);
+    await Promise.resolve();
+  }
+
+  await check('clampPercent(-5) === 0', function () {
+    var actual = internalFunction('clampPercent')(-5);
+    assert(actual === 0, '实际=' + repr(actual));
+    return '返回 0';
+  });
+
+  await check('clampPercent(140) === 100', function () {
+    var actual = internalFunction('clampPercent')(140);
+    assert(actual === 100, '实际=' + repr(actual));
+    return '返回 100';
+  });
+
+  await check('usageTotals(...) total === 42 且 billedInput === 35', function () {
+    var usage = {
+      uncachedInputTokens: 10,
+      cacheReadTokens: 20,
+      cacheWriteTokens: 5,
+      outputTokens: 7
+    };
+    var totals = internalFunction('usageTotals')(usage);
+    assert(totals && typeof totals === 'object', '返回类型=' + typeof totals);
+    assert(totals.total === 42, 'total=' + repr(totals.total) + '，期望 42');
+    assert(totals.billedInput === 35, 'billedInput=' + repr(totals.billedInput) + '，期望 35');
+    return 'total=42，billedInput=35';
+  });
+
+  await check('computeLiveStream([]) 返回对象且 tokens === 0', function () {
+    var live = internalFunction('computeLiveStream')([]);
+    assert(live && typeof live === 'object', '返回类型=' + typeof live);
+    assert(live.tokens === 0, 'tokens=' + repr(live.tokens) + '，期望 0');
+    return 'tokens=0';
+  });
+
+  await check('computeLiveStream(2 条 transient) attemptId === "a1" 且 tokens > 0', function () {
+    var event = {
+      type: 'assistant/live-chunk',
+      data: {
+        attemptId: 'a1',
+        chunk: { type: 'text-delta', text: 'hello world' }
+      }
+    };
+    var entries = [
+      { type: 'transient', event: event },
+      { type: 'transient', event: event }
+    ];
+    var live = internalFunction('computeLiveStream')(entries);
+    assert(live && typeof live === 'object', '返回类型=' + typeof live);
+    assert(live.attemptId === 'a1', 'attemptId=' + repr(live.attemptId) + '，期望 "a1"');
+    assert(
+      typeof live.tokens === 'number' && isFinite(live.tokens) && live.tokens > 0,
+      'tokens=' + repr(live.tokens) + '，期望 > 0'
+    );
+    return 'attemptId=a1，tokens=' + live.tokens;
+  });
+
+  var allowedStates = ['idle', 'think', 'work', 'eat', 'happy', 'error'];
+  await check('deriveMascotState(...) 返回合法字符串状态', function () {
+    var stateValue = internalFunction('deriveMascotState')({
+      session: { running: true },
+      live: { tokens: 10 },
+      error: null
+    });
+    assert(typeof stateValue === 'string' && stateValue.length > 0, '返回类型=' + typeof stateValue);
+    assert(
+      allowedStates.indexOf(stateValue) >= 0,
+      '返回 ' + repr(stateValue) + '，不在约定枚举 idle/think/work/eat/happy/error 内'
+    );
+    return 'state=' + stateValue;
+  });
+
+  /* ---------------------------------------------------------------------- *
+   * F. 汇总
+   * ---------------------------------------------------------------------- */
+
+  function finalize() {
+    var failedCount = 0;
+    for (var i = 0; i < results.length; i += 1) if (!results[i].ok) failedCount += 1;
+    var total = results.length;
+    window.__done = true;
+    window.__summary = {
+      total: total,
+      passed: total - failedCount,
+      failed: failedCount,
+      ok: failedCount === 0
+    };
+
+    var summaryEl = document.getElementById('summary');
+    if (summaryEl) {
+      summaryEl.textContent = failedCount === 0
+        ? 'ALL PASS (' + total + ')'
+        : 'FAILED (' + failedCount + '/' + total + ')';
+      summaryEl.className = failedCount === 0 ? 'pass' : 'fail';
+    }
+
+    var styleTag = typeof document !== 'undefined' && document.head
+      ? document.head.querySelector('style[data-plugin-css]')
+      : null;
+    var metaEl = document.getElementById('meta');
+    if (metaEl) {
+      metaEl.textContent =
+        'load=' + calls.load.length +
+        ' · require=[' + calls.require.join(', ') + ']' +
+        ' · registered=' + calls.registered.length +
+        ' · style[data-plugin-css]=' + (styleTag ? 'yes' : 'no') +
+        (calls.errors.length > 0 ? ' · errors=' + calls.errors.length : '');
+    }
+
+    document.title =
+      (failedCount === 0 ? 'ALL PASS' : 'FAILED (' + failedCount + '/' + total + ')') +
+      ' · dsh-token-mascot harness';
+  }
+
+  try {
+    // 所有 check 都 await 完毕（上面的 await 已保证顺序）。
+  } finally {
+    finalize();
+  }
+})();
+</script>
+
+</body>
+</html>

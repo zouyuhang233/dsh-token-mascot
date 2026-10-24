@@ -1,0 +1,30 @@
+# dsh-token-mascot bundle patch
+#
+# 本插件在 Loader 树里只有这一行：宿主侧入口（lib/index.js）+ 浏览器侧产物（lib/client.js）。
+# 浏览器侧模块地址由「行 id」决定：/plugins/dsh-token-mascot/client.js。
+#
+# patch 会整体替换目标行的 config（不是合并），所以下面列出全部可调项；
+# 删掉某一项则回落到 lib/client.js 里的默认值。
+
+- insert:
+    - id: dsh-token-mascot
+      name: 'dsh-token-mascot'
+      config:
+        mascot:
+          # 打开客户端时，卡片是否默认展开（false = 只显示小汪，点它展开）
+          collapsed: false
+          # 是否显示「本步实时估算」（来自流式 live-chunk，按字符数估算；精确值仍以官方 tokenUsage 为准）
+          showLiveEstimate: true
+          # 是否显示上下文占用环（来自 contextPressure 投影）
+          showContext: true
+          # 是否显示「当前任务」（来自 todos 投影 + 会话运行状态）
+          showTask: true
+          # 是否显示「今日 · 全部会话」合计（今日有活动的会话累计；需要 DSH 0.2.1-rc.3+ 的 useSessions）
+          showToday: true
+          # 角色显示尺寸（px，64–220）；默认 112
+          size: 112
+          # 默认位置的右边距 / 底边距（px）。拖拽后的位置会记在 localStorage 里，优先使用。
+          offsetX: 18
+          offsetY: 104
+          # 角色主色（只影响强调色，不影响宿主主题）
+          accent: '#4d93f8'
