@@ -6,6 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/zouyuhang233/dsh-token-mascot/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/zouyuhang233/dsh-token-mascot?style=flat-square"></a>
+  <a href="https://github.com/zouyuhang233/dsh-token-mascot/releases/latest"><img alt="release" src="https://img.shields.io/github/v/release/zouyuhang233/dsh-token-mascot?style=flat-square"></a>
   <img alt="DSH" src="https://img.shields.io/badge/DSH-%E2%89%A5%200.2.1--rc.3-4d93f8?style=flat-square">
   <img alt="version" src="https://img.shields.io/badge/version-1.4.1-4d93f8?style=flat-square">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-green?style=flat-square">
@@ -88,12 +89,18 @@
 4. **完全退出并重开 DSH**（或刷新窗口）
 5. 右下角出现小汪即安装成功
 
+> **装不上 / 网络连不上 GitHub？** 用[方式二](#方式二下载-zip--release--本地路径)下载 Release 里的 zip，再用本地路径安装即可。
+
 > 如果 DSH 提示「安装源 / registry」相关选项，保持默认即可；这是 Git 来源，不走 npm。
 
-### 方式二：下载 ZIP → 本地路径
+### 方式二：下载 ZIP / Release → 本地路径
 
-1. 打开仓库页：**Code → Download ZIP**
-2. 解压，得到包含 `package.json` 的目录，例如 `dsh-token-mascot-main/`
+1. 打开 **Releases** 下载现成压缩包（推荐）：
+
+   <https://github.com/zouyuhang233/dsh-token-mascot/releases/latest>
+
+   下载 `dsh-token-mascot-1.4.1-plugin.zip`；或者仓库页 **Code → Download ZIP** 下载源码包。
+2. 解压，得到包含 `package.json` 的目录，例如 `dsh-token-mascot-1.4.1/` 或 `dsh-token-mascot-main/`
 3. DSH：**设置 → 插件 → 添加插件**
 4. 填这个目录的**本地绝对路径**：
 
