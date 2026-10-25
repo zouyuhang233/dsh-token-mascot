@@ -8,7 +8,7 @@
   <a href="https://github.com/zouyuhang233/dsh-token-mascot/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/zouyuhang233/dsh-token-mascot?style=flat-square"></a>
   <a href="https://github.com/zouyuhang233/dsh-token-mascot/releases/latest"><img alt="release" src="https://img.shields.io/github/v/release/zouyuhang233/dsh-token-mascot?style=flat-square"></a>
   <img alt="DSH" src="https://img.shields.io/badge/DSH-%E2%89%A5%200.2.1--rc.3-4d93f8?style=flat-square">
-  <img alt="version" src="https://img.shields.io/badge/version-1.4.1-4d93f8?style=flat-square">
+  <img alt="version" src="https://img.shields.io/badge/version-1.4.2-4d93f8?style=flat-square">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-green?style=flat-square">
 </p>
 
@@ -46,7 +46,7 @@
 | `+N` 气泡 | 每结算一步出现的增量 |
 | 速率 | 运行中按流式增量估算；空闲时显示整会话解码均速 |
 | 上下文条 | 上下文占用 / 窗口大小 / 百分比（卡片最下方） |
-| 今日 · 全部会话 | 今日有活动的所有会话累计之和；点击展开各会话明细（本会话有标记） |
+| 今日 · 全部会话 | 今日新增（相对今天首次看到时的增量）的会话合计；点击展开各会话明细（本会话有标记） |
 | 当前任务 | 出错 → 工具调用 → todo 进行中 → 思考中 → 待命 |
 | 六种神情 | 眨眼（空闲）、害羞（思考）、生气（工具）、惊讶（吃 token）、开心（完成）、难过（出错） |
 
@@ -99,8 +99,8 @@
 
    <https://github.com/zouyuhang233/dsh-token-mascot/releases/latest>
 
-   下载 `dsh-token-mascot-1.4.1-plugin.zip`；或者仓库页 **Code → Download ZIP** 下载源码包。
-2. 解压，得到包含 `package.json` 的目录，例如 `dsh-token-mascot-1.4.1/` 或 `dsh-token-mascot-main/`
+   下载 `dsh-token-mascot-1.4.2-plugin.zip`；或者仓库页 **Code → Download ZIP** 下载源码包。
+2. 解压，得到包含 `package.json` 的目录，例如 `dsh-token-mascot-1.4.2/` 或 `dsh-token-mascot-main/`
 3. DSH：**设置 → 插件 → 添加插件**
 4. 填这个目录的**本地绝对路径**：
 
@@ -178,7 +178,7 @@ C:\Users\<你的用户名>\.dsh\profiles\desktop\cordis.patch.yml
 ## 数字口径
 
 - 大数字来自官方 `tokenUsage` 投影：**输入 + 缓存读 + 缓存写 + 输出**。缓存读往往占大头，所以数字看起来会比「新输入」大很多。
-- 「今日 · 全部会话」= **今日有活动（`updatedAt` 在今天）的会话的会话累计之和**。DSH 的投影是会话级累计，没有按天切分；跨天会话会整段计入，一天内用完的会话就是当天消耗。
+- 「今日 · 全部会话」= **今日新增**：插件在当天第一次看到某会话时记录当时的累计作为「今日基准」，之后显示 `当前累计 − 今日基准`；跨 0 点自动更换基准，所以第二天会重置。升级/当天首次打开前的消耗无法回填，从加载那一刻开始计。\n- 卡片顶部的大数字是**本会话累计**，不按天重置；「今日」才是按天新增。
 - 单位规则：**≥ 1 亿显示「亿」**（两位小数，如 `1.05亿`），**否则显示「万」**（如 `9725万`）。
 - 花费在模型响应结束时才结算，所以大数字是「每步跳一次」；生成中的 `≈N` 是流式字符估算，结算后被精确值覆盖。
 
@@ -202,9 +202,15 @@ C:\Users\<你的用户名>\.dsh\profiles\desktop\cordis.patch.yml
 </details>
 
 <details>
+<summary><b>第二天「今日」会重置吗？为什么大数字没变？</b></summary>
+
+会重置。插件在当天第一次看到某个会话时记录当时的累计作为「今日基准」，之后显示 `当前累计 − 今日基准`；跨 0 点自动换基准，所以第二天「今日」会归零再重新累计。卡片顶部的大数字是**本会话累计**，本来就不按天重置；「今日」才是今天新增。升级/当天首次打开之前的消耗无法回填，会从加载那一刻开始计。
+</details>
+
+<details>
 <summary><b>数字特别大，是不是算错了？</b></summary>
 
-没算错。累计口径包含**缓存读**（命中缓存的 prompt 也计 token），通常会远大于新输入。看「缓存读」那一格和缓存命中率就能对上。
+没算错。累计口径包含**缓存读**（命中缓存的 prompt 也计 token），通常会远大于新输入。看副标题里的缓存命中率，或悬停「今日」行看输入/缓存/输出拆分就能对上。
 </details>
 
 <details>

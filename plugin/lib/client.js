@@ -32,6 +32,7 @@
   var SLOT_NAME = "conversation.input.right";
   var STYLE_ID = PLUGIN_ID + "/style";
   var POS_KEY = "dsh-token-mascot:position:v1";
+  var TODAY_BASE_KEY = "dsh-token-mascot:today-baseline:v1";
   var DEFAULT_PET_SIZE = 112;
   var OPEN_KEY = "dsh-token-mascot:open:v1";
 
@@ -153,6 +154,66 @@
     var date = new Date(typeof now === "number" && isFinite(now) ? now : Date.now());
     date.setHours(0, 0, 0, 0);
     return date.getTime();
+  }
+
+  /** 本地日期键：YYYY-MM-DD（用于按天保存「今日」基准）。 */
+  function localDayKey(now) {
+    var date = new Date(typeof now === "number" && isFinite(now) ? now : Date.now());
+    var month = date.getMonth() + 1;
+    var day = date.getDate();
+    return date.getFullYear() + "-" + (month < 10 ? "0" + month : String(month)) + "-" + (day < 10 ? "0" + day : String(day));
+  }
+
+  /** 读取当天的会话 token 基准；换天自动作废。 */
+  function readTodayBaseline(dayKey) {
+    var stored = readStoredJSON(TODAY_BASE_KEY);
+    if (
+      stored &&
+      stored.version === 1 &&
+      stored.day === dayKey &&
+      stored.sessions &&
+      typeof stored.sessions === "object"
+    ) {
+      return stored;
+    }
+    return { version: 1, day: dayKey, sessions: {} };
+  }
+
+  function writeTodayBaseline(store) {
+    writeStoredJSON(TODAY_BASE_KEY, store);
+  }
+
+  /** tokenUsage 投影 → 四个计费桶（数字）。 */
+  function usageBucketsOf(usage) {
+    var source = usage || {};
+    return {
+      uncachedInputTokens: num(source.uncachedInputTokens),
+      cacheReadTokens: num(source.cacheReadTokens),
+      cacheWriteTokens: num(source.cacheWriteTokens),
+      outputTokens: num(source.outputTokens),
+    };
+  }
+
+  function usageBucketTotal(buckets) {
+    var source = buckets || {};
+    return (
+      num(source.uncachedInputTokens) +
+      num(source.cacheReadTokens) +
+      num(source.cacheWriteTokens) +
+      num(source.outputTokens)
+    );
+  }
+
+  /** 当前投影 - 今日基准 = 今日新增（逐桶，非负）。 */
+  function subtractUsageBuckets(usage, base) {
+    var current = usageBucketsOf(usage);
+    var previous = usageBucketsOf(base);
+    return {
+      uncachedInputTokens: Math.max(0, current.uncachedInputTokens - previous.uncachedInputTokens),
+      cacheReadTokens: Math.max(0, current.cacheReadTokens - previous.cacheReadTokens),
+      cacheWriteTokens: Math.max(0, current.cacheWriteTokens - previous.cacheWriteTokens),
+      outputTokens: Math.max(0, current.outputTokens - previous.outputTokens),
+    };
   }
 
   /**
@@ -644,10 +705,11 @@ var AVATAR_IMAGE = "data:image/webp;base64,UklGRkgmAABXRUJQVlA4WAoAAAAQAAAAnwAAn
    *   - 根作用域标准 hook `useSessions`：会话列表（含 updatedAt）与已加载的投影；
    *   - 注入的 `ctx.sessions.refreshProjections(id)`：按需把今日活跃会话的投影读进来。
    *
-   * 口径说明：DSH 的 `tokenUsage` 投影是「会话级累计」，没有按天切分。所以这里统计的是
-   * 「今日有活动的会话」的会话累计 —— 对「一天开多个会话、每个会话当天用完」的用法就是
-   * 今日消耗；跨天会话无法只取今天那一段（宿主投影本身不提供日桶），这里如实按会话累计计入，
-   * 并在 tooltip/README 中标注。旧版 DSH 没有 useSessions 时返回 null，界面自动隐藏这一行。
+   * 口径说明：DSH 的 `tokenUsage` 投影是「会话级累计」，没有按天切分。所以这里在当天第一次
+   * 看到某个会话时记下它的累计值作为「今日基准」，之后用「当前累计 - 基准」得到今天新增；
+   * 0 点会重新取基准（页面一直开着也会重置）。升级/当天首次打开时，已有累计会被当作基准，
+   * 所以今日计数从那一刻开始——之前当天已经消耗的部分无法回填。
+   * 旧版 DSH 没有 useSessions 时返回 null，界面自动隐藏这一行。
    */
   function useTodayUsage(props) {
     var React = window.__TM_REACT__;
@@ -656,12 +718,40 @@ var AVATAR_IMAGE = "data:image/webp;base64,UklGRkgmAABXRUJQVlA4WAoAAAAQAAAAnwAAn
     var requestedRef = React.useRef(null);
     if (requestedRef.current === null) requestedRef.current = {};
     var dayStart = startOfLocalDay();
+    var dayKey = localDayKey();
     /* 跨过 0 点后重新按新的一天加载各会话投影（旧 day 的缓存值可能已过期）。 */
     var dayRef = React.useRef(dayStart);
     if (dayRef.current !== dayStart) {
       dayRef.current = dayStart;
       requestedRef.current = {};
     }
+    var baselineRef = React.useRef(null);
+    if (baselineRef.current === null || baselineRef.current.day !== dayKey) {
+      baselineRef.current = readTodayBaseline(dayKey);
+    }
+    var baseline = baselineRef.current;
+    var baselineDirty = false;
+
+    /* 0 点强制重渲染一次：让「今日基准」在新的一天重新建立（页面空闲时也会触发）。 */
+    var dayTickState = React.useState(0);
+    var bumpDay = dayTickState[1];
+    React.useEffect(
+      function () {
+        var now = Date.now();
+        var next = new Date(now);
+        next.setHours(24, 0, 0, 0);
+        var delay = Math.max(1000, next.getTime() - now + 200);
+        var timer = setTimeout(function () {
+          bumpDay(function (value) {
+            return value + 1;
+          });
+        }, delay);
+        return function () {
+          clearTimeout(timer);
+        };
+      },
+      [dayKey],
+    );
     var selectAll = function (state) {
       return state;
     };
@@ -718,9 +808,18 @@ var AVATAR_IMAGE = "data:image/webp;base64,UklGRkgmAABXRUJQVlA4WAoAAAAQAAAAnwAAn
         loading += 1;
         continue;
       }
-      usages.push(usage);
-      var rowTotals = usageTotals(usage);
+      var current = usageBucketsOf(usage);
+      var base = baseline.sessions[row.id];
+      if (base === undefined || usageBucketTotal(current) < usageBucketTotal(base)) {
+        /* 今天第一次看到这个会话（或计数被重置）：记下当前累计作为今日基准。 */
+        baseline.sessions[row.id] = current;
+        base = current;
+        baselineDirty = true;
+      }
+      var delta = subtractUsageBuckets(usage, base);
+      var rowTotals = usageTotals(delta);
       if (rowTotals.total > 0) {
+        usages.push(delta);
         details.push({
           id: row.id,
           title: row.displayTitle || row.title || "",
@@ -729,6 +828,7 @@ var AVATAR_IMAGE = "data:image/webp;base64,UklGRkgmAABXRUJQVlA4WAoAAAAQAAAAnwAAn
         });
       }
     }
+    if (baselineDirty) writeTodayBaseline(baseline);
     details.sort(function (left, right) {
       return right.total - left.total;
     });
@@ -1105,7 +1205,7 @@ var AVATAR_IMAGE = "data:image/webp;base64,UklGRkgmAABXRUJQVlA4WAoAAAAQAAAAnwAAn
                     setTodayOpen(!todayOpen);
                   },
                   title:
-                    "点击展开今日各会话消耗：" +
+                    "今日新增（相对今天首次看到时的增量，含本会话与子会话）：" +
                     formatExact(derived.today.total) +
                     " tokens · " +
                     derived.today.sessions +
